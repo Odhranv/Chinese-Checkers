@@ -279,29 +279,29 @@ def random_bot(
 
     return old_reference, new_reference
 
-def AI_Player_Team12(board: List[List[int]],
+# Copy of random_bot method signature and validity checks
+def AI_Player_Team12(
+    board: List[List[int]],
     player: int,
-    visualize_tree: bool) -> Tuple[str, str]:
+    visualize_tree: bool
+) -> Tuple[str, str]:
     if player not in [1, 2, 3, 4]:
         raise ValueError(f"Player {player} is not a valid player")
 
     if len(board) != 5 or any(len(row) != 5 for row in board):
         raise ValueError("Board must be 5 by 5")
 
-    def evaluate_position(board: List[List[int]], player: int) -> int:
+    def evaluate_position(board):
         #TODO: Noah, implement an evaluation function for the board state.
         # I just need this to return a number that represents how good the board state is for the given player.
         pass
 
     # We find all the legal moves (This is a copy of the algo for random_bot, but we put it inside a nested function)
-    def get_legal_moves(
-        position_board: List[List[int]],
-        position_player: int
-    ) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    def get_all_legal_moves(local_board, local_player):
         legal_moves = []
         for row in range(5):
                 for column in range(5):
-                    if board[row][column] != player:
+                    if local_board[row][column] != local_player:
                         continue
         
                     oldPos: Tuple[int, int] = (row, column)
@@ -310,128 +310,55 @@ def AI_Player_Team12(board: List[List[int]],
                         for new_column in range(5):
                             newPos: Tuple[int, int] = (new_row, new_column)
         
-                            if check_legal_move(board, oldPos, newPos):
+                            if check_legal_move(local_board, oldPos, newPos):
                                 legal_moves.append((oldPos, newPos))
         return legal_moves
 
-    def order_moves(
-        position_board: List[List[int]],
-        position_player: int,
-        moves: List[Tuple[Tuple[int, int], Tuple[int, int]]],
-        root_player: int,
-        maximizing: bool
-    ) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
+    # We order the moves based on which player is calling the function
+    def rank_potential_moves(position_board, current_player, moves, root_player):
         scored_moves = []
         for old_position, new_position in moves:
             child_board = [row[:] for row in position_board]
-            move(child_board, old_position, new_position, position_player)
-            scored_moves.append((
-                evaluate_position(child_board, root_player),
-                (old_position, new_position)
-            ))
-
-        scored_moves.sort(key=lambda item: item[0], reverse=maximizing)
-        return [move_item for _, move_item in scored_moves]
-
-    transposition_table: Dict[
-        Tuple[Tuple[Tuple[int, ...], ...], int, int, int], float
-    ] = {}
-
-    def max_n(
-        position_board: List[List[int]],
-        current_player: int,
-        remaining_depth: int,
-        moves: List[Tuple[Tuple[int, int], Tuple[int, int]]],
-        root_player: int,
-        alpha: float,
-        beta: float
-    ) -> float:
-        if remaining_depth == 0 or not moves:
-            return evaluate_position(position_board, root_player)
-
-        position_key = (
-            tuple(tuple(row) for row in position_board),
-            current_player,
-            remaining_depth,
-            root_player,
-        )
-        cached_score = transposition_table.get(position_key)
-        if cached_score is not None:
-            return cached_score
-
-        next_player = current_player % 4 + 1
-        maximizing = current_player == root_player
-        best_score = float("-inf") if maximizing else float("inf")
-        fully_searched = True
-
-        ordered_moves = order_moves(
-            position_board,
-            current_player,
-            moves,
-            root_player,
-            maximizing
-        )
-
-        for old_position, new_position in ordered_moves:
-            child_board = [row[:] for row in position_board]
             move(child_board, old_position, new_position, current_player)
+            scored_moves.append((evaluate_position(child_board)[current_player - 1], (old_position, new_position)))
 
-            score = max_n(
-                child_board,
-                next_player,
-                remaining_depth - 1,
-                get_legal_moves(child_board, next_player),
-                root_player,
-                alpha,
-                beta
-            )
+        scored_moves.sort(key=lambda item: item[0], reverse = (current_player == root_player))
+        return [m for _, m in scored_moves]
 
-            if maximizing:
-                best_score = max(best_score, score)
-                alpha = max(alpha, best_score)
-            else:
-                best_score = min(best_score, score)
-                beta = min(beta, best_score)
+    def max_n_algorithm(board, player, moves, depth):
+        if depth == 0:
+            return evaluate_position(board)
 
-            if alpha >= beta:
-                fully_searched = False
-                break
+        best_scores = None
 
-        if fully_searched:
-            transposition_table[position_key] = best_score
+        next_player = player % 4 + 1
+        for potential_move in moves:
+            child_board = [row[:] for row in board]
+            move(child_board, potential_move[0], potential_move[1], player)
+            next_moves = get_all_legal_moves(child_board, next_player)
 
-        return best_score
+            scores = max_n_algorithm(child_board, next_player, next_moves, depth - 1)
 
-    legal_moves = get_legal_moves(board, player)
+            if best_scores is None or scores[player - 1] > best_scores[player - 1]:
+                best_scores = scores
+
+        return best_scores
+
+    legal_moves = get_all_legal_moves(board, player)
     if not legal_moves:
         raise ValueError(f"Player {player} has no legal moves")
-
+    ordered_legal_moves = rank_potential_moves(board, player, legal_moves, player)
     best_move = legal_moves[0]
     best_score = float("-inf")
 
-    ordered_legal_moves = order_moves(
-        board,
-        player,
-        legal_moves,
-        player,
-        True
-    )
-
-    for candidate_move in ordered_legal_moves:
+    search_depth = 2
+    for potential_move in ordered_legal_moves:
         child_board = [row[:] for row in board]
-        move(child_board, candidate_move[0], candidate_move[1], player)
-        candidate_score = max_n(
-            child_board,
-            player % 4 + 1,
-            search_depth - 1,
-            get_legal_moves(child_board, player % 4 + 1),
-            player,
-            best_score,
-            float("inf")
-        )
+        move(child_board, potential_move[0], potential_move[1], player)
+        candidate_score = max_n_algorithm(child_board, player % 4 + 1, get_all_legal_moves(child_board, player % 4 + 1), search_depth)[player - 1]
 
         if candidate_score > best_score:
-            best_move = candidate_move
+            best_move = potential_move
             best_score = candidate_score
 
     oldPos, newPos = best_move
@@ -439,11 +366,11 @@ def AI_Player_Team12(board: List[List[int]],
     if visualize_tree:
         pass #TODO: Noah, implement minimax search tree visualization here.
 
+    # Convert the positions to the required format (copy from random_bot)
     old_reference: str = chr(ord("A") + oldPos[1]) + str(oldPos[0] + 1)
     new_reference: str = chr(ord("A") + newPos[1]) + str(newPos[0] + 1)
 
     return old_reference, new_reference
-    
 
 def illegal_bot(
     board: List[List[int]],
