@@ -279,7 +279,6 @@ def random_bot(
 
     return old_reference, new_reference
 
-# Copy of random_bot method signature and validity checks
 def AI_Player_Team12(
     board: List[List[int]],
     player: int,
@@ -296,7 +295,6 @@ def AI_Player_Team12(
         # I just need this to return a number that represents how good the board state is for the given player.
         pass
 
-    # We find all the legal moves (This is a copy of the algo for random_bot, but we put it inside a nested function)
     def get_all_legal_moves(local_board, local_player):
         legal_moves = []
         for row in range(5):
@@ -314,48 +312,52 @@ def AI_Player_Team12(
                                 legal_moves.append((oldPos, newPos))
         return legal_moves
 
-    # We order the moves based on which player is calling the function
-    def rank_potential_moves(position_board, current_player, moves, root_player):
+    def rank_potential_moves(position_board, current_player, moves):
         scored_moves = []
         for old_position, new_position in moves:
-            child_board = [row[:] for row in position_board]
-            move(child_board, old_position, new_position, current_player)
-            scored_moves.append((evaluate_position(child_board)[current_player - 1], (old_position, new_position)))
+            temp_board = [row[:] for row in position_board]
+            move(temp_board, old_position, new_position, current_player)
+            scored_moves.append((evaluate_position(temp_board)[current_player - 1], (old_position, new_position)))
 
-        scored_moves.sort(key=lambda item: item[0], reverse = (current_player == root_player))
+        scored_moves.sort(key=lambda item: item[0], reverse=True)
         return [m for _, m in scored_moves]
 
+    tree_dict = {}
     def max_n_algorithm(board, player, moves, depth):
-        if depth == 0:
+        if not moves or depth == 0:
             return evaluate_position(board)
 
-        best_scores = None
+        if (board, player, depth) in tree_dict:
+            return tree_dict[(board, player, depth)]
+
+        best_scores = float("-inf"), float("-inf"), float("-inf"), float("-inf")
 
         next_player = player % 4 + 1
         for potential_move in moves:
-            child_board = [row[:] for row in board]
-            move(child_board, potential_move[0], potential_move[1], player)
-            next_moves = get_all_legal_moves(child_board, next_player)
+            temp_board = [row[:] for row in board]
+            move(temp_board, potential_move[0], potential_move[1], player)
+            next_moves = get_all_legal_moves(temp_board, next_player)
 
-            scores = max_n_algorithm(child_board, next_player, next_moves, depth - 1)
+            scores = max_n_algorithm(temp_board, next_player, next_moves, depth - 1)
 
-            if best_scores is None or scores[player - 1] > best_scores[player - 1]:
+            if scores[player - 1] > best_scores[player - 1]:
                 best_scores = scores
 
+        tree_dict[(board, player, depth)] = best_scores
         return best_scores
 
     legal_moves = get_all_legal_moves(board, player)
     if not legal_moves:
         raise ValueError(f"Player {player} has no legal moves")
-    ordered_legal_moves = rank_potential_moves(board, player, legal_moves, player)
+    ordered_legal_moves = rank_potential_moves(board, player, legal_moves)
     best_move = legal_moves[0]
     best_score = float("-inf")
 
     search_depth = 2
     for potential_move in ordered_legal_moves:
-        child_board = [row[:] for row in board]
-        move(child_board, potential_move[0], potential_move[1], player)
-        candidate_score = max_n_algorithm(child_board, player % 4 + 1, get_all_legal_moves(child_board, player % 4 + 1), search_depth)[player - 1]
+        temp_board = [row[:] for row in board]
+        move(temp_board, potential_move[0], potential_move[1], player)
+        candidate_score = max_n_algorithm(temp_board, player % 4 + 1, get_all_legal_moves(temp_board, player % 4 + 1), search_depth)[player - 1]
 
         if candidate_score > best_score:
             best_move = potential_move
@@ -366,7 +368,6 @@ def AI_Player_Team12(
     if visualize_tree:
         pass #TODO: Noah, implement minimax search tree visualization here.
 
-    # Convert the positions to the required format (copy from random_bot)
     old_reference: str = chr(ord("A") + oldPos[1]) + str(oldPos[0] + 1)
     new_reference: str = chr(ord("A") + newPos[1]) + str(newPos[0] + 1)
 
