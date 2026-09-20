@@ -322,13 +322,28 @@ def AI_Player_Team12(
         scored_moves.sort(key=lambda item: item[0], reverse=True)
         return [m for _, m in scored_moves]
 
-    tree_dict = {}
-    def max_n_algorithm(board, player, moves, depth):
-        if not moves or depth == 0:
-            return evaluate_position(board)
+    # Every visited position is recorded as a node so the search tree can be printed afterwards.
+    def new_tree_node(potential_move, moving_player):
+        return {
+            "move": potential_move,   # the move that leads to this node (None for the root)
+            "player": moving_player,  # the player who made that move
+            "scores": None,           # the (P1, P2, P3, P4) value backed up to this node
+            "children": [],
+            "best_child": None,       # the child whose value was chosen at this node
+            "cached": False,          # True if the value was reused from tree_dict instead of searched
+        }
 
-        if (board, player, depth) in tree_dict:
-            return tree_dict[(board, player, depth)]
+    tree_dict = {}
+    def max_n_algorithm(board, player, moves, depth, node):
+        if not moves or depth == 0:
+            node["scores"] = evaluate_position(board)
+            return node["scores"]
+
+        board_key = tuple(map(tuple, board))
+        if (board_key, player, depth) in tree_dict:
+            node["scores"] = tree_dict[(board_key, player, depth)]
+            node["cached"] = True
+            return node["scores"]
 
         best_scores = float("-inf"), float("-inf"), float("-inf"), float("-inf")
 
@@ -338,13 +353,48 @@ def AI_Player_Team12(
             move(temp_board, potential_move[0], potential_move[1], player)
             next_moves = get_all_legal_moves(temp_board, next_player)
 
-            scores = max_n_algorithm(temp_board, next_player, next_moves, depth - 1)
+            child = new_tree_node(potential_move, player)
+            node["children"].append(child)
+            scores = max_n_algorithm(temp_board, next_player, next_moves, depth - 1, child)
 
             if scores[player - 1] > best_scores[player - 1]:
                 best_scores = scores
+                node["best_child"] = child
 
-        tree_dict[(board, player, depth)] = best_scores
+        tree_dict[(board_key, player, depth)] = best_scores
+        node["scores"] = best_scores
         return best_scores
+
+    def format_move(potential_move):
+        (old_row, old_column), (new_row, new_column) = potential_move
+        return (
+            chr(ord("A") + old_column) + str(old_row + 1)
+            + "->"
+            + chr(ord("A") + new_column) + str(new_row + 1)
+        )
+
+    def format_scores(scores):
+        return "(" + ", ".join(f"{score:g}" for score in scores) + ")"
+
+    tree_stats = {"nodes": 0, "leaves": 0, "cached": 0}
+    def print_search_tree(node, prefix, is_last, is_chosen):
+        # Prints this node on one line, then its children indented underneath it.
+        branch = "`-- " if is_last else "|-- "
+        marker = "*" if is_chosen else " "
+        line = f"{prefix}{branch}{marker} P{node['player']} {format_move(node['move'])}  {format_scores(node['scores'])}"
+
+        tree_stats["nodes"] += 1
+        if node["cached"]:
+            tree_stats["cached"] += 1
+            line += "  [cached]"
+        elif not node["children"]:
+            tree_stats["leaves"] += 1
+
+        print(line)
+
+        child_prefix = prefix + ("    " if is_last else "|   ")
+        for index, child in enumerate(node["children"]):
+            print_search_tree(child, child_prefix, index == len(node["children"]) - 1, child is node["best_child"])
 
     legal_moves = get_all_legal_moves(board, player)
     if not legal_moves:
@@ -353,20 +403,34 @@ def AI_Player_Team12(
     best_move = legal_moves[0]
     best_score = float("-inf")
 
+    root = new_tree_node(None, None)
+    root["scores"] = float("-inf"), float("-inf"), float("-inf"), float("-inf")
+
     search_depth = 2
     for potential_move in ordered_legal_moves:
         temp_board = [row[:] for row in board]
         move(temp_board, potential_move[0], potential_move[1], player)
-        candidate_score = max_n_algorithm(temp_board, player % 4 + 1, get_all_legal_moves(temp_board, player % 4 + 1), search_depth)[player - 1]
+        child = new_tree_node(potential_move, player)
+        root["children"].append(child)
+        candidate_score = max_n_algorithm(temp_board, player % 4 + 1, get_all_legal_moves(temp_board, player % 4 + 1), search_depth, child)[player - 1]
 
         if candidate_score > best_score:
             best_move = potential_move
             best_score = candidate_score
+            root["best_child"] = child
+            root["scores"] = child["scores"]
 
     oldPos, newPos = best_move
 
     if visualize_tree:
-        pass #TODO: Noah, implement minimax search tree visualization here.
+        print(f"=== Search tree: player {player} to move (max-n, {search_depth + 1} plies) ===")
+        print("Legend: 'P2 E5->D4' = player 2 moves E5 to D4, (a, b, c, d) = value for players 1-4, "
+              "* = branch chosen by the player above it, [cached] = value reused from an earlier identical position")
+        print(f"root  {format_scores(root['scores'])}")
+        for index, child in enumerate(root["children"]):
+            print_search_tree(child, "", index == len(root["children"]) - 1, child is root["best_child"])
+        print(f"Searched {tree_stats['nodes']} nodes ({tree_stats['leaves']} leaves, {tree_stats['cached']} cached). "
+              f"Chosen move: P{player} {format_move(best_move)}")
 
     old_reference: str = chr(ord("A") + oldPos[1]) + str(oldPos[0] + 1)
     new_reference: str = chr(ord("A") + newPos[1]) + str(newPos[0] + 1)
