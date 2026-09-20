@@ -14,6 +14,7 @@ from halma import (
     parse_position,
     random_bot,
     illegal_bot,
+    AI_Player_Team12,
     win_cells_1v1,
     initial_pos_1v1
 )
@@ -39,7 +40,7 @@ BotFunction = Callable[
 ]
 
 # You can set your bot function here, the default one is random_bot, which as the name suggests makes random moves
-BOT_FUNCTION: BotFunction = illegal_bot
+BOT_FUNCTION: BotFunction = AI_Player_Team12
 
 
 class HalmaGame:

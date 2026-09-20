@@ -20,6 +20,7 @@ from halma import (
     move,
     parse_position,
     random_bot,
+    AI_Player_Team12,
     win_cells_all,
     initial_pos,
     illegal_bot,
@@ -60,7 +61,7 @@ Example: from AI_Player_Team1 import AI_Player_Team1
 Alternatively you can set a desired player's bot function to None and play them yourself
 '''
 BOT_FUNCTIONS: Dict[int, Optional[BotFunction]] = {
-    1: random_bot,
+    1: AI_Player_Team12,
     2: random_bot,
     3: random_bot,
     4: random_bot,

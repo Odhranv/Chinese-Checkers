@@ -291,9 +291,24 @@ def AI_Player_Team12(
         raise ValueError("Board must be 5 by 5")
 
     def evaluate_position(board):
-        #TODO: Noah, implement an evaluation function for the board state.
-        # I just need this to return a number that represents how good the board state is for the given player.
-        pass
+        #We use manhattan distance for this 
+        scores = []
+        for player in range(1, 5):
+            target_cells = win_cells_all.get(player, [])
+                
+            player_score = 0
+            for r in range(len(board)):
+                for c in range(len(board[r])):
+                    if board[r][c] == player:
+                        min_dist = float('inf')
+                        for target_r, target_c in target_cells:
+                            dist = abs(r - target_r) + abs(c - target_c)
+                            if dist < min_dist:
+                                min_dist = dist
+                        player_score -= min_dist
+            scores.append(player_score)
+        
+        return tuple(scores)
 
     def get_all_legal_moves(local_board, local_player):
         legal_moves = []
@@ -322,6 +337,7 @@ def AI_Player_Team12(
         scored_moves.sort(key=lambda item: item[0], reverse=True)
         return [m for _, m in scored_moves]
 
+
     # Every visited position is recorded as a node so the search tree can be printed afterwards.
     def new_tree_node(potential_move, moving_player):
         return {
@@ -348,6 +364,7 @@ def AI_Player_Team12(
         best_scores = float("-inf"), float("-inf"), float("-inf"), float("-inf")
 
         next_player = player % 4 + 1
+        
         for potential_move in moves:
             temp_board = [row[:] for row in board]
             move(temp_board, potential_move[0], potential_move[1], player)
@@ -407,12 +424,13 @@ def AI_Player_Team12(
     root["scores"] = float("-inf"), float("-inf"), float("-inf"), float("-inf")
 
     search_depth = 2
+
     for potential_move in ordered_legal_moves:
         temp_board = [row[:] for row in board]
         move(temp_board, potential_move[0], potential_move[1], player)
         child = new_tree_node(potential_move, player)
         root["children"].append(child)
-        candidate_score = max_n_algorithm(temp_board, player % 4 + 1, get_all_legal_moves(temp_board, player % 4 + 1), search_depth, child)[player - 1]
+        candidate_score = max_n_algorithm(temp_board, player % 4 + 1, get_all_legal_moves(temp_board, next_player), search_depth, child)[player - 1]
 
         if candidate_score > best_score:
             best_move = potential_move
