@@ -1,3 +1,5 @@
+from halma import *
+
 def AI_Player_Team12(
     board: List[List[int]],
     player: int,
