@@ -33,11 +33,11 @@ def AI_Player_Team12(
         
         return tuple(scores)
 
-    def get_all_legal_moves(local_board, local_player):
+    def get_all_legal_moves(board, player):
         legal_moves = []
         for row in range(5):
                 for column in range(5):
-                    if local_board[row][column] != local_player:
+                    if board[row][column] != player:
                         continue
         
                     oldPos: Tuple[int, int] = (row, column)
@@ -46,7 +46,7 @@ def AI_Player_Team12(
                         for new_column in range(5):
                             newPos: Tuple[int, int] = (new_row, new_column)
         
-                            if check_legal_move(local_board, oldPos, newPos):
+                            if check_legal_move(board, oldPos, newPos):
                                 legal_moves.append((oldPos, newPos))
         return legal_moves
 
@@ -56,7 +56,6 @@ def AI_Player_Team12(
             temp_board = [row[:] for row in position_board]
             move(temp_board, old_position, new_position, current_player)
             scored_moves.append((evaluate_position(temp_board)[current_player - 1], (old_position, new_position)))
-
         scored_moves.sort(key=lambda item: item[0], reverse=True)
         return [m for _, m in scored_moves]
 
