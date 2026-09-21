@@ -14,22 +14,22 @@ def AI_Player_Team12(
         raise ValueError("Board must be 5 by 5")
 
     def evaluate_position(board):
-        # We use manhattan distance for this 
+        #We use manhattan distance for this 
         scores = []
         for player in range(1, 5):
-            target_cells = win_cells_all.get(player, [])
+            targetCells = win_cells_all.get(player, [])
                 
-            player_score = 0
-            for r in range(len(board)):
-                for c in range(len(board[r])):
-                    if board[r][c] == player:
-                        min_dist = float('inf')
-                        for target_r, target_c in target_cells:
-                            dist = abs(r - target_r) + abs(c - target_c)
+            score = 0
+            for row in range(len(board)):
+                for column in range(len(board[row])):
+                    if board[row][column] == player:
+                        min_dist = 100
+                        for targetRow, targetColumn in targetCells:
+                            dist = abs(row - targetRow) + abs(column - targetColumn)
                             if dist < min_dist:
                                 min_dist = dist
-                        player_score -= min_dist
-            scores.append(player_score)
+                        score -= min_dist
+            scores.append(score)
         
         return tuple(scores)
 
