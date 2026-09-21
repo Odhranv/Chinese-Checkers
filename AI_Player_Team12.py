@@ -1,4 +1,6 @@
 from halma import *
+from treelib import Tree
+from PIL import Image, ImageDraw, ImageFont
 
 def AI_Player_Team12(
     board: List[List[int]],
@@ -12,7 +14,7 @@ def AI_Player_Team12(
         raise ValueError("Board must be 5 by 5")
 
     def evaluate_position(board):
-        #We use manhattan distance for this 
+        # We use manhattan distance for this 
         scores = []
         for player in range(1, 5):
             target_cells = win_cells_all.get(player, [])
@@ -58,14 +60,13 @@ def AI_Player_Team12(
         scored_moves.sort(key=lambda item: item[0], reverse=True)
         return [m for _, m in scored_moves]
 
-
     # Every visited position is recorded as a node so the search tree can be printed afterwards.
     def new_tree_node(potential_move, moving_player):
         return {
             "move": potential_move,   # the move that leads to this node (None for the root)
             "player": moving_player,  # the player who made that move
             "scores": None,           # the (P1, P2, P3, P4) value backed up to this node
-            "children": [],
+            "children": [],           # list of children nodes
             "best_child": None,       # the child whose value was chosen at this node
             "cached": False,          # True if the value was reused from tree_dict instead of searched
         }
@@ -132,9 +133,6 @@ def AI_Player_Team12(
             add_children_to_tree(child, tree, tree_node.identifier)
             
     def save_lines_as_png(lines, path):
-        # Pillow is only needed for the picture, so it is imported here to keep the bot playable without it.
-        from PIL import Image, ImageDraw, ImageFont
-
         # The branches only line up in a monospace font; try the usual ones on macOS, Windows and Linux.
         font = None
         for font_name in ["Menlo.ttc", "Consolas.ttf", "DejaVuSansMono.ttf", "Courier New.ttf", "cour.ttf"]:
@@ -185,9 +183,6 @@ def AI_Player_Team12(
     oldPos, newPos = best_move
 
     if visualize_tree:
-        # treelib is only needed for the picture, so it is imported here to keep the bot playable without it.
-        from treelib import Tree
-
         tree = Tree()
         tree_root = tree.create_node(f"root  {format_scores(root['scores'])}")
         add_children_to_tree(root, tree, tree_root.identifier)
