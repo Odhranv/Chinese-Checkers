@@ -132,7 +132,6 @@ def AI_Player_Team12(
             add_children_to_tree(child, tree, tree_node.identifier)
             
     def save_lines_as_png(lines, path):
-        # The branches only line up in a monospace font; try the usual ones on macOS, Windows and Linux.
         font = None
         for font_name in ["Menlo.ttc", "Consolas.ttf", "DejaVuSansMono.ttf", "Courier New.ttf", "cour.ttf"]:
             try:
